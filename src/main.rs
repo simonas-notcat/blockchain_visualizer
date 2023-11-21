@@ -1,13 +1,13 @@
-use bevy::ecs::query;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy::window::PrimaryWindow;
 use bevy_mod_reqwest::*;
+use bevy_panorbit_camera::*;
 use serde::Deserialize;
 use std::time::Duration;
 
-const BLOCK_SPEED: f32 = 10.0;
+const BLOCK_SPEED: f32 = 2.0;
 
 #[derive(Deserialize)]
 struct BlockResponse {
@@ -47,7 +47,8 @@ impl Default for Block {
 fn main() {
     App::new()
         .register_type::<Block>()
-        .add_systems(Startup, spawn_camera)
+        .add_systems(Startup, setup)
+        .add_plugins(PanOrbitCameraPlugin)
         .add_plugins((
             DefaultPlugins,
             WorldInspectorPlugin::default(),
@@ -64,18 +65,39 @@ fn main() {
         .run();
 }
 
-pub fn spawn_camera(mut commands: Commands, window_query: Query<&Window, With<PrimaryWindow>>) {
-    let window = window_query.get_single().unwrap();
-
-    commands.spawn(Camera2dBundle {
-        transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
+/// set up a simple 3D scene
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // circular base
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(shape::Circle::new(400.0).into()),
+        material: materials.add(Color::WHITE.into()),
+        transform: Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
         ..default()
     });
+    // light
+    commands.spawn(PointLightBundle {
+        point_light: PointLight {
+            intensity: 1500.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        ..default()
+    });
+    // camera
+    commands.spawn((Camera3dBundle {
+        transform: Transform::from_xyz(0.8, 1.1, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ..default()
+    }, PanOrbitCamera::default(),));
 }
 
 fn block_movement(mut enemy_query: Query<&mut Transform, With<Block>>, time: Res<Time>) {
     for mut transform in enemy_query.iter_mut() {
-        let direction = Vec3::new(1.0, 0.0, 0.0);
+        let direction = Vec3::new(0.0, 0.0, -1.0);
         transform.translation += direction * BLOCK_SPEED * time.delta_seconds();
     }
 }
@@ -97,11 +119,9 @@ fn handle_responses(
     mut commands: Commands, 
     results: Query<(Entity, &ReqwestBytesResult)>, 
     query: Query<&Block>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
-    asset_server: Res<AssetServer>,
-
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let window = window_query.get_single().unwrap();
 
     for (e, res) in results.iter() {
         let a: Response = serde_json::from_slice(res.as_ref().unwrap()).unwrap();
@@ -121,11 +141,14 @@ fn handle_responses(
                             gas_limit,
                             gas_used,
                         },
-                        SpriteBundle {
-                            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
-                            texture: asset_server.load("sprites/ball_blue_large.png"),
+                            // cube
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+                            material: materials.add(Color::rgb_u8(124, 144, 255).into()),
+                            transform: Transform::from_xyz(0.0, 0.5, 0.0),
                             ..default()
                         },
+
                         ));
 
                     }
