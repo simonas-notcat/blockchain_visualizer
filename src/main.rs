@@ -1,13 +1,12 @@
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy::window::PrimaryWindow;
 use bevy_mod_reqwest::*;
 use bevy_panorbit_camera::*;
 use serde::Deserialize;
 use std::time::Duration;
 
-const BLOCK_SPEED: f32 = 2.0;
+const BLOCK_SPEED: f32 = 0.2;
 
 #[derive(Deserialize)]
 struct BlockResponse {
@@ -136,6 +135,25 @@ fn handle_responses(
                         println!("Already have this block");
                     } else {
                         println!("spawning new block {}", number);
+                        let ratio = gas_used as f32 / gas_limit as f32;
+
+                        let height = 1.0 * ratio;
+                        let center_translation = 0.5 * height;
+
+                        println!("ratio {}", ratio);
+                        commands.spawn((Block {
+                            number,
+                            gas_limit,
+                            gas_used,
+                        },
+                            // cube
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+                            material: materials.add(Color::rgb_u8(124, 144, 255).with_a(0.5).into()),
+                            transform: Transform::from_xyz(0.0, 0.5, 0.0),
+                            ..default()
+                        },
+                        ));
                         commands.spawn((Block {
                             number,
                             gas_limit,
@@ -145,10 +163,9 @@ fn handle_responses(
                         PbrBundle {
                             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
                             material: materials.add(Color::rgb_u8(124, 144, 255).into()),
-                            transform: Transform::from_xyz(0.0, 0.5, 0.0),
+                            transform: Transform::from_xyz(0.0, center_translation, 0.0).with_scale(Vec3::new(0.99, ratio, 0.99)),
                             ..default()
                         },
-
                         ));
 
                     }
