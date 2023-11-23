@@ -16,6 +16,17 @@ use std::time::Duration;
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle};
 
 const BLOCK_SPEED: f32 = 0.2;
+const tx_spacing: f32 = 0.05;
+
+
+#[derive(Deserialize)]
+struct TransactionResponse {
+    #[serde(rename = "blockNumber")]
+    block_number: String,
+    #[serde(rename = "transactionIndex")]
+    index: String,
+    gas: String,
+}
 
 #[derive(Deserialize)]
 struct BlockResponse {
@@ -24,6 +35,7 @@ struct BlockResponse {
     #[serde(rename = "gasUsed")]
     gas_used: String,
     number: String,
+    transactions: Vec<TransactionResponse>,
 }
 
 #[derive(Deserialize)]
@@ -37,6 +49,14 @@ struct Block {
     number: u64,
     gas_limit: u64,
     gas_used: u64,
+}
+
+#[derive(Component, Debug, Reflect, Default)]
+#[reflect(Component)]
+struct Transaction {
+    block_number: u64,
+    gas: u64,
+    index: u64,
 }
 
 impl Default for Block {
@@ -54,6 +74,7 @@ impl Default for Block {
 
 fn main() {
     App::new()
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .register_type::<Block>()
         .add_systems(Startup, setup)
         .add_plugins(PanOrbitCameraPlugin)
@@ -159,6 +180,18 @@ fn handle_responses(
     for (e, res) in results.iter() {
         let a: Response = serde_json::from_slice(res.as_ref().unwrap()).unwrap();
 
+
+
+        // let transactions: Vec<Transaction> = a.result.transactions.clone().into_iter().map(|t| {
+        //     let block_number = u64::from_str_radix(&t.block_number[2..], 16).unwrap();
+        //     let gas = u64::from_str_radix(&t.gas[2..], 16).unwrap();
+        //     let index = u64::from_str_radix(&t.index[2..], 16).unwrap();
+        //     Transaction {
+        //         block_number,
+        //         gas,
+        //         index,
+        //     }
+        // });
         if let Ok(number) = u64::from_str_radix(&a.result.number[2..], 16) {
             if let Ok(gas_limit) = u64::from_str_radix(&a.result.gas_limit[2..], 16) {
                 if let Ok(gas_used) = u64::from_str_radix(&a.result.gas_used[2..], 16) {
@@ -171,40 +204,55 @@ fn handle_responses(
                         println!("spawning new block {}", number);
                         let ratio = gas_used as f32 / gas_limit as f32;
 
-                        let height = 1.0 * ratio;
-                        let center_translation = 0.5 * height;
+                        let new_height = 1.0 * ratio;
+                        let center_translation = (-0.5 + new_height / 2.0) - 0.01;
 
                         println!("ratio {}", ratio);
-                        commands.spawn((Block {
+                        commands.spawn(Block {
                             number,
                             gas_limit,
                             gas_used,
-                        },
-                            // cube
-                        PbrBundle {
+                        })
+                        .insert(PbrBundle {
                             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-                            material: materials.add(Color::rgb_u8(124, 144, 255).with_a(0.5).into()),
+                            material: materials.add(Color::rgb_u8(124, 144, 255).with_a(1.0).into()),
                             transform: Transform::from_xyz(0.0, 0.5, 0.0),
                             ..default()
-                        },
-                        PickableBundle::default(),
-                        ));
-                        commands.spawn((Block {
-                            number,
-                            gas_limit,
-                            gas_used,
-                        },
-                            // cube
-                        PbrBundle {
+                        })
+                        .insert(PickableBundle::default())
+                        .with_children(|parent| {
+                            parent.spawn(PbrBundle {
                             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
                             material: materials.add(StandardMaterial {
                                 emissive: Color::rgb_u8(124, 144, 255), // 4. Put something bright in a dark environment to see the effect
                                 ..default()
                             }),
-                            transform: Transform::from_xyz(0.0, center_translation + 0.0001, 0.0).with_scale(Vec3::new(0.99, ratio, 0.99)),
+                            // transform: Transform::from_xyz(0.0, center_translation, 0.0).with_scale(Vec3::new(0.99, ratio, 0.99)),
+                            transform: Transform::from_xyz(0.0, center_translation, 0.0).with_scale(Vec3::new(1.01, ratio, 1.01)),
                             ..default()
-                        },
-                        ));
+                            });
+
+                            let mut offset = 1.0 / 2.0 - tx_spacing;
+                            // spawn cubes for each transaction spaced vertically
+                            for (i, t) in a.result.transactions.iter().enumerate() {
+                                let gas = u64::from_str_radix(&t.gas[2..], 16).unwrap();
+                                let index = u64::from_str_radix(&t.index[2..], 16).unwrap();
+                                let tx_ratio = gas as f32 / gas_limit as f32;
+                                let tx_translation = offset - (tx_ratio / 2.0);
+                                parent.spawn(PbrBundle {
+                                    mesh: meshes.add(Mesh::from(shape::Cube { size: ratio })),
+                                    material: materials.add(StandardMaterial {
+                                        emissive: Color::rgb_u8(124, 144, 255), // 4. Put something bright in a dark environment to see the effect
+                                        ..default()
+                                    }),
+                                    transform: Transform::from_xyz(0.0, tx_translation, 0.0).with_scale(tx_ratio * Vec3::new(1.0, 1.0, 1.0)),
+                                    ..default()
+                                })
+                                .insert(PickableBundle::default());
+                                offset -= tx_ratio + tx_spacing;
+                            }
+                            
+                        });
 
                     }
                     
