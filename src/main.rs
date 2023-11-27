@@ -1,11 +1,4 @@
-use bevy::{
-    core_pipeline::{
-        bloom::{BloomCompositeMode, BloomSettings},
-        tonemapping::Tonemapping,
-    },
-    prelude::*,
-    render::camera::ScalingMode,
-};
+use bevy::{core_pipeline::tonemapping::Tonemapping, prelude::*, render::camera::ScalingMode};
 
 use bevy::{
     pbr::{MaterialPipeline, MaterialPipelineKey},
@@ -21,14 +14,14 @@ use bevy::{
 
 use bevy::time::common_conditions::on_timer;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle};
+// use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle};
 use bevy_mod_reqwest::*;
 use bevy_panorbit_camera::*;
 use serde::Deserialize;
 use std::time::Duration;
 
 const BLOCK_SPEED: f32 = 0.2;
-const tx_spacing: f32 = 0.05;
+const TX_SPACING: f32 = 0.05;
 
 #[derive(Deserialize)]
 struct TransactionResponse {
@@ -82,17 +75,21 @@ impl Default for Block {
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
+        .insert_resource(ClearColor(Color::rgb_u8(47, 72, 88)))
         .register_type::<Block>()
         .add_systems(Startup, setup)
         .add_plugins(PanOrbitCameraPlugin)
-        .add_plugins(DefaultPickingPlugins)
+        // .add_plugins(DefaultPickingPlugins)
         .add_plugins((
             DefaultPlugins,
             // WorldInspectorPlugin::default(),
             ReqwestPlugin,
             MaterialPlugin::<LineMaterial>::default(),
         ))
+        .insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 1.0,
+        })
         .add_systems(
             Update,
             (
@@ -118,40 +115,31 @@ fn setup(
     //     ..default()
     // });
     // light
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 200.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(4.0, 6.0, 4.0),
-        ..default()
-    });
+    // commands.spawn(PointLightBundle {
+    //     point_light: PointLight {
+    //         intensity: 200.0,
+    //         shadows_enabled: true,
+    //         ..default()
+    //     },
+    //     transform: Transform::from_xyz(4.0, 6.0, 4.0),
+    //     ..default()
+    // });
 
     commands.spawn((
         Camera3dBundle {
             projection: OrthographicProjection {
                 near: 0.0,
                 far: 500.0,
-                scale: 8.0,
+                scale: 12.5,
                 scaling_mode: ScalingMode::FixedVertical(0.8),
                 ..default()
             }
             .into(),
-            camera: Camera {
-                hdr: true, // 1. HDR is required for bloom
-
-                ..default()
-            },
+            camera: Camera { ..default() },
             tonemapping: Tonemapping::TonyMcMapface, // 2. Using a tonemapper that desaturates to white is recommended
-            transform: Transform::from_xyz(0.8, 1.1, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
+            transform: Transform::from_xyz(4.0, 4.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
         },
-        BloomSettings {
-            composite_mode: BloomCompositeMode::Additive, // 3. Add the bloom to the scene
-            intensity: 0.05,
-            ..Default::default()
-        }, // 3. Enable bloom for the camera
         PanOrbitCamera::default(),
     ));
 }
@@ -216,17 +204,16 @@ fn handle_responses(
                             })
                             .insert(PbrBundle {
                                 mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-                                material: materials
-                                    .add(Color::rgb_u8(124, 144, 255).with_a(1.0).into()),
+                                material: materials.add(Color::rgb_u8(51, 102, 153).into()),
                                 transform: Transform::from_xyz(0.0, 0.5, 0.0),
                                 ..default()
                             })
-                            .insert(PickableBundle::default())
+                            // .insert(PickableBundle::default())
                             .with_children(|parent| {
                                 parent.spawn(PbrBundle {
                                     mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
                                     material: materials.add(StandardMaterial {
-                                        emissive: Color::rgba_u8(124, 144, 255, 127), // 4. Put something bright in a dark environment to see the effect
+                                        base_color: Color::rgb_u8(134, 187, 216), // 4. Put something bright in a dark environment to see the effect
                                         ..default()
                                     }),
                                     // transform: Transform::from_xyz(0.0, center_translation, 0.0).with_scale(Vec3::new(0.99, ratio, 0.99)),
@@ -235,7 +222,7 @@ fn handle_responses(
                                     ..default()
                                 });
 
-                                let mut offset = 1.0 / 2.0 - tx_spacing;
+                                let mut offset = 1.0 / 2.0 - TX_SPACING;
                                 // spawn cubes for each transaction spaced vertically
                                 for (i, t) in a.result.transactions.iter().enumerate() {
                                     let gas = u64::from_str_radix(&t.gas[2..], 16).unwrap();
@@ -247,7 +234,7 @@ fn handle_responses(
                                     parent.spawn(PbrBundle {
                                         mesh: meshes.add(Mesh::from(shape::Cube { size: ratio })),
                                         material: materials.add(StandardMaterial {
-                                            emissive: Color::rgb_u8(124, 144, 255), // 4. Put something bright in a dark environment to see the effect
+                                            base_color: Color::rgb_u8(134, 187, 216), // 4. Put something bright in a dark environment to see the effect
                                             ..default()
                                         }),
                                         transform: Transform::from_xyz(0.0, tx_translation, 0.0)
@@ -260,12 +247,12 @@ fn handle_responses(
                                             lines: vec![(previous_position, current_position)],
                                         })),
                                         material: line_materials.add(LineMaterial {
-                                            color: Color::rgb_u8(124, 144, 255),
+                                            color: Color::rgb_u8(134, 187, 216),
                                         }),
                                         ..default()
                                     });
 
-                                    offset -= tx_ratio / 2.0 - tx_spacing;
+                                    offset -= tx_ratio / 2.0 - TX_SPACING;
                                     previous_position = current_position;
                                 }
                             });
