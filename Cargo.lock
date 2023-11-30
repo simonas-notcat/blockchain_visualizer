@@ -1213,6 +1213,7 @@ dependencies = [
  "bevy",
  "bevy_mod_reqwest",
  "bevy_panorbit_camera",
+ "bevy_window",
  "serde",
  "serde_json",
 ]
