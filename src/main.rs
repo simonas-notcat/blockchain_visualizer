@@ -26,10 +26,10 @@ const TX_SPACING: f32 = 0.05;
 
 #[derive(Deserialize)]
 struct TransactionResponse {
-    #[serde(rename = "blockNumber")]
-    block_number: String,
+    // #[serde(rename = "blockNumber")]
+    // block_number: String,
     #[serde(rename = "transactionIndex")]
-    index: String,
+    // index: String,
     gas: String,
 }
 
@@ -233,9 +233,9 @@ fn handle_responses(
 
                                 let mut offset = 1.0 / 2.0 - TX_SPACING;
                                 // spawn cubes for each transaction spaced vertically
-                                for (i, t) in a.result.transactions.iter().enumerate() {
+                                for (_, t) in a.result.transactions.iter().enumerate() {
                                     let gas = u64::from_str_radix(&t.gas[2..], 16).unwrap();
-                                    let index = u64::from_str_radix(&t.index[2..], 16).unwrap();
+                                    // let index = u64::from_str_radix(&t.index[2..], 16).unwrap();
                                     let tx_ratio = gas as f32 / gas_limit as f32;
                                     let tx_translation = offset - (tx_ratio / 2.0);
                                     let current_position = Vec3::new(0.0, tx_translation, 0.0);
