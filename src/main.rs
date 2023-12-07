@@ -12,8 +12,8 @@ use bevy::{
     },
 };
 
-use bevy_window::PresentMode;
 use bevy::time::common_conditions::on_timer;
+use bevy_window::PresentMode;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
 // use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle};
 use bevy_mod_reqwest::*;
@@ -90,7 +90,6 @@ fn main() {
             ..default()
         }))
         .add_plugins((
-           
             // WorldInspectorPlugin::default(),
             ReqwestPlugin,
             MaterialPlugin::<LineMaterial>::default(),
@@ -332,7 +331,6 @@ impl From<LineStrip> for Mesh {
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, line.points)
     }
 }
-
 
 fn keyboard_controls(
     time: Res<Time>,
