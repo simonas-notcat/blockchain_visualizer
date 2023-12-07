@@ -19,3 +19,6 @@ bevy_window = "0.12.0"
 [profile.dev]
 opt-level = 1
 
+[lints.clippy]
+type_complexity = "allow"
+too_many_arguments = "allow"

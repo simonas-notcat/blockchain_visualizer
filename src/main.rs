@@ -48,7 +48,7 @@ struct Response {
     result: BlockResponse,
 }
 
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Debug, Default, Reflect)]
 #[reflect(Component)]
 struct Block {
     number: u64,
@@ -62,16 +62,6 @@ struct Transaction {
     block_number: u64,
     gas: u64,
     index: u64,
-}
-
-impl Default for Block {
-    fn default() -> Self {
-        Block {
-            number: 0,
-            gas_limit: 0,
-            gas_used: 0,
-        }
-    }
 }
 
 fn main() {
